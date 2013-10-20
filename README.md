@@ -20,5 +20,5 @@ game.setup_glider
 game.setup_glider_gun
 
 # Initialize a random setup.
-game.setup_toad
+game.setup_random(1000)
 ```
