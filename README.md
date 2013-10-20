@@ -1,7 +1,7 @@
 Game of Life
 ============
 
-Simple Game of Life I wrote in Ruby. It run completely in a terminal using a character matrix to visualize the game.
+Simple Game of Life I wrote in Ruby. It runs completely in a terminal using a character matrix to visualize the game.
 
 To run the game:
 
