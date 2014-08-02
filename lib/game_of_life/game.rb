@@ -10,16 +10,14 @@ class Game
   # Seeds the cell at the given position.
   # Input should be an array, i.e. [0,0]
   def seed(x, y)
-    @board[x,y].revive
+    @board[x,y].alive = true
   end
 
   # Run a game with the given size.
   def each_step(&block)
-    index = 0
     while true
-      block.call(@board, index)
+      block.call(@board)
       @board.advance()
-      index += 1
     end
   end
 

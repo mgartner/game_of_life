@@ -1,6 +1,3 @@
-require 'matrix'
-#require 'game_of_life/cell'
-
 # The Board represents the state of all the cells and can calculatethe next
 # state based on the current, governed by the set of rules.
 class Board
@@ -9,53 +6,20 @@ class Board
   def initialize(row_count, column_count)
     @width = column_count
     @height = row_count
-    @cell_matrix = Matrix.build(@height, @width) { |row, col| Cell.new }
+    @cell_matrix = new_matrix(row_count, column_count)
     self
+  end
+
+  # Creates a new matrix via 2D arrays.
+  def new_matrix(rows, cols)
+    Array.new(rows) { Array.new(cols) { Cell.new } }
   end
 
   # Get the cell at the specified row and column.
   def [](row, col)
-    return @cell_matrix[row, col]
+    return @cell_matrix[row][col]
   end
 
-  # Returns true if the cell is alive and will die on the next round.
-  def dying?(row, col)
-    cell = self[row, col]
-    if cell.alive?
-      live_neighbor_count = neighbor_count(row, col)
-      if live_neighbor_count == 2 || live_neighbor_count == 3
-        return false
-      else
-        return true
-      end
-    end
-    return false
-  end
-
-  # Returns true if the cell is dead and will revive on the next round.
-  def reviving?(row, col)
-    cell = self[row, col]
-    if !cell.alive?
-      live_neighbor_count = neighbor_count(row, col)
-      if live_neighbor_count == 3
-        return true
-      end
-    end
-    return false
-  end
-
-  # Returns true if the cell is living and will remain alive.
-  def living?(row, col)
-    cell = self[row, col]
-    if cell.alive?
-      live_neighbor_count = neighbor_count(row, col)
-      if live_neighbor_count == 2 || live_neighbor_count == 3
-        return true
-      end
-    end
-    return false
-  end
-  
   # Given the current state of the cells, advances to the next state based
   # on the following rules:
   #   1. Any live cell with fewer than two live neighbours dies, as if caused by under-population.
@@ -63,25 +27,39 @@ class Board
   #   3. Any live cell with more than three live neighbours dies, as if by overcrowding.
   #   4. Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
   def advance
-    new_cell_matrix = Matrix.build(@height, @width) { |rol, col| Cell.new }
+
+    # Calculate the neighbors of each cell.
     for i in (0..@height-1)
       for j in (0..@width-1)
-        if living?(i, j) || reviving?(i, j)
-          new_cell_matrix[i, j].revive
+        cell = @cell_matrix[i][j]
+        cell.neighbors = neighbor_count(i, j)
+      end
+    end
+
+    # Kill, keep alive, or revive each cell base on neighbor count.
+    for i in (0..@height-1)
+      for j in (0..@width-1)
+        cell = @cell_matrix[i][j]
+        if cell.alive
+          if cell.neighbors != 2 && cell.neighbors != 3
+            cell.alive = false
+          end
+        else
+          if cell.neighbors == 3
+            cell.alive = true
+          end
         end
       end
     end
-    @cell_matrix = new_cell_matrix
   end
 
-  # Returns the number of live neighbors of the cell at the given row and 
-  # column.
-  def neighbor_count(row, col)
-    count = 0
-    each_neighbor(row, col) do |cell|
-      count += 1 if cell.alive?
+  # Yields each cell with an x and y coordinate.
+  def each_cell(&block)
+    for i in (0..@height-1)
+      for j in (0..@width-1)
+        block.call(i, j, @cell_matrix[i][j])
+      end
     end
-    return count
   end
 
   # Yields each neighbor of the cell at the given row and column.
@@ -90,18 +68,27 @@ class Board
       if i > -1 && i < @height
         for j in (col-1..col+1)
           if j > -1 && j < @width && !(i == row && j == col)
-            block.call(@cell_matrix[i, j])
+            block.call(self[i, j])
           end
         end
       end
     end
   end
 
-  # Yields each cell in the board.
-  def each_cell(&block)
-    @cell_matrix.to_a.flatten.each do |cell|
-      block.call(cell)
+  # Returns the number of live neighbors of the cell at the given row and 
+  # column.
+  def neighbor_count(row, col)
+    count = 0
+    for i in (row-1..row+1)
+      if i > -1 && i < @height
+        for j in (col-1..col+1)
+          if j > -1 && j < @width && !(i == row && j == col)
+            count += 1 if @cell_matrix[i][j].alive
+          end
+        end
+      end
     end
+    return count
   end
 
   # Reprint the board
@@ -110,9 +97,8 @@ class Board
     for i in (0..@height-1)
       row_string = ""
       for j in (0..@width-1)
-        if dying?(i, j)
-          row_string << "\e[33mX\e[0m"
-        elsif living?(i, j)
+        cell = self[i, j]
+        if cell.alive
           row_string << "\e[32mX\e[0m"
         else
           row_string << "-"
